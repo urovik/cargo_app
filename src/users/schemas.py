@@ -33,8 +33,8 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     is_active: bool
-    is_verified: bool
-    last_login: Optional[datetime]
+    #is_verified: bool
+    #last_login: Optional[datetime]
     created_at: datetime
     updated_at: datetime
     

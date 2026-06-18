@@ -1,4 +1,5 @@
 from src.db.db_manager import TransactionDbManager
+from src.orders.schemas import OrderResponse
 from src.orders.schemas import OrderCreate, OrderUpdate
 from src.orders.models import OrderStatus
 from math import radians, sin, cos, sqrt, atan2
@@ -57,7 +58,11 @@ class OrderService:
             )
             
             await db.commit()
-            return {"order": order, "distance_km": distance, "price": price}
+            return {
+                "order": OrderResponse.model_validate(order),  # <-- сериализуем через Pydantic
+                "distance_km": distance,
+                "price": price
+            }
     
     @staticmethod
     async def get_user_orders(user_id: int) -> list:
@@ -199,3 +204,21 @@ class OrderService:
             
             await db.commit()
             return updated_order
+    @staticmethod
+    async def get_driver_orders(driver_id: int) -> list:
+        async with TransactionDbManager() as db:
+            return await db.order_repo.get_by_driver_id(driver_id)
+
+    @staticmethod
+    async def driver_cancel_order(order_id: int, driver_id: int) -> bool:
+        async with TransactionDbManager() as db:
+            order = await db.order_repo.get_by_id(order_id)
+            if not order or order.driver_id != driver_id or order.status != OrderStatus.ACCEPTED:
+                return False
+            # Переводим заказ обратно в PENDING и освобождаем водителя
+            updated = await db.order_repo.update_order_status(order_id, OrderStatus.PENDING)
+            if updated:
+                await db.driver_repo.update_status(driver_id, "available")
+                await db.commit()
+                return True
+            return False

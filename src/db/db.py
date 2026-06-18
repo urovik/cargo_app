@@ -7,7 +7,6 @@ DATABASE_URL = (
     f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 )
 
-print(DATABASE_URL)
 async_engine = create_async_engine(
     DATABASE_URL,
     echo=True,  # для отладки, в проде можно убрать

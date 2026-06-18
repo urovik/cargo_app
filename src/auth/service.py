@@ -15,20 +15,18 @@ class AuthService:
     async def register_user(user_data: UserCreate) -> UserResponse:
         """Регистрация нового пользователя"""
         async with TransactionDbManager() as db:
-            # Проверяем, существует ли пользователь
-            existing_user = await db.user_repo.get_by_email(user_data.email)
-            if existing_user:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already registered"
-                )
-            
+            # Проверка email
+            existing_email = await db.user_repo.get_by_email(user_data.email)
+            if existing_email:
+                raise HTTPException(400, detail="Email already registered")
+            # Проверка username
             existing_username = await db.user_repo.get_by_username(user_data.username)
             if existing_username:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Username already taken"
-                )
+                raise HTTPException(400, detail="Username already taken")
+            # Проверка телефона
+            existing_phone = await db.user_repo.get_by_phone(user_data.phone)
+            if existing_phone:
+                raise HTTPException(400, detail="Phone already registered")
             
             # Хэшируем пароль с помощью bcrypt через passlib
             hashed_password = get_password_hash(user_data.password)
@@ -52,7 +50,7 @@ class AuthService:
     async def login_user(login_data: LoginRequest) -> UserLoginResponse:
         """Аутентификация пользователя и выдача JWT токенов"""
         async with TransactionDbManager() as db:
-            # Ищем пользователя по username или email
+            # Ищем пользователя по username или phone
             user = await db.user_repo.get_by_username(login_data.username)
             if not user:
                 user = await db.user_repo.get_by_email(login_data.username)
@@ -84,7 +82,7 @@ class AuthService:
             await db.commit()
             
             # Создаем JWT токены с помощью PyJWT
-            token_data = {"sub": user.id, "username": user.username, "role": user.role.value}
+            token_data = {"sub": str(user.id), "username": user.username, "role": user.role.value}
             access_token = JWTHandler.create_access_token(token_data)
             refresh_token = JWTHandler.create_refresh_token(token_data)
             
@@ -121,7 +119,7 @@ class AuthService:
             )
         
         # Создаем новый access токен
-        new_token_data = {"sub": user_id, "username": payload.get("username"), "role": payload.get("role")}
+        new_token_data = {"sub": str(user_id), "username": payload.get("username"), "role": payload.get("role")}
         new_access_token = JWTHandler.create_access_token(new_token_data)
         
         logger.info(f"Token refreshed for user ID: {user_id}")

@@ -7,6 +7,7 @@ import enum
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
     USER = "user"
+    DRIVER = "driver"
 
 class User(Base):
     __tablename__ = 'users'
@@ -18,6 +19,7 @@ class User(Base):
     full_name = Column(String, nullable=False)
     phone = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.USER)
+    last_login = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
